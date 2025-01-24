@@ -4,10 +4,10 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
 
-import requests, os
-import json
+import requests, os, json
 from dotenv  import load_dotenv
 from getpass import getpass
+from display import Display
 
 
 class System:
@@ -16,7 +16,7 @@ class System:
         load_dotenv()
         self._ZABBIX_URL = os.getenv("ZABBIX_URL")
         self._USER       = os.getenv("USER")
-        self._PASSWORD   = getpass('Senha: ')
+        self._PASSWORD   = os.getenv("PASSWORD")
         self._HEADERS    = {"Content-Type": "application/json"}
         self._token      = None
         self._all_hosts  = None
@@ -27,7 +27,8 @@ class System:
             self._get_authentication_token()
             self._get_all_hosts()
             self._display_results()
-        except Exception as error: print()
+        except KeyboardInterrupt:  print(f'{Display.red("Process stopped")}')
+        except Exception as error: print(f'{Display.red("Unknown error:")}\n{error}')
 
 
     def _get_authentication_token(self) -> None:
@@ -62,11 +63,14 @@ class System:
         for host in self._all_hosts:
             print(f"\nHost: {host['name']} (ID: {host['hostid']})")
             items = self._get_item_information_of_a_host(host["hostid"])
-            for item in items:
-                print(f"  - {item['name']}: {item['lastvalue']}")
+            if not items:
+                print("  Nenhum item encontrado.")
+            else:
+                for item in items:
+                    print(f"  - {item['name']}: {item.get('lastvalue', 'Sem valor registrado')}")
 
-    
-    def _get_item_information_of_a_host(self, hostid:str) -> None:
+
+    def _get_item_information_of_a_host(self, hostid:str):
         data = {
             "jsonrpc": "2.0",
             "method": "item.get",
@@ -74,18 +78,28 @@ class System:
                 "output": ["itemid", "name", "lastvalue"],
                 "hostids": hostid,
                 "search": {
-                    "name": ["CPU", "Memory", "Disk", "Software"],
+                    "name": "Software",
                 },
             },
             "auth": self._token,
             "id": 3,
         }
-        response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(data))
-        return response.json()["result"]
+        try:
+            response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(data))
+            response.raise_for_status()
+            result = response.json()
+            if "result" in result:
+                return result["result"]
+            else:
+                print("Erro: Resposta inesperada da API:", result)
+                return []
+        except requests.exceptions.RequestException as e:
+            print(f"Erro ao se comunicar com o Zabbix: {e}")
+            return []
 
 
 
 
 if __name__ == "__main__":
     system = System()
-    token  = system._execute()
+    system._execute()
