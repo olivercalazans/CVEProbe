@@ -1,16 +1,21 @@
+# MIT License
+# Copyright (c) 2024 Oliver Ribeiro Calazans Jeronimo
+# Repository: https://github.com/olivercalazans/CVE_Project
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
+
+
 import requests, os
 import json
 from dotenv  import load_dotenv
 from getpass import getpass
 
 
-
 class System:
 
     def __init__(self):
         load_dotenv()
-        self._ZABBIX_URL = os.load(ZABBIX_URL)
-        self._USER       = os.load(USER)
+        self._ZABBIX_URL = os.getenv("ZABBIX_URL")
+        self._USER       = os.getenv("USER")
         self._PASSWORD   = getpass('Senha: ')
         self._HEADERS    = {"Content-Type": "application/json"}
         self._token      = None
@@ -18,9 +23,11 @@ class System:
 
     
     def _execute(self) -> None:
-        self._get_authentication_token()
-        self._get_all_hosts()
-        self._display_results()
+        try:
+            self._get_authentication_token()
+            self._get_all_hosts()
+            self._display_results()
+        except Exception as error: print()
 
 
     def _get_authentication_token(self) -> None:
