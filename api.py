@@ -5,9 +5,10 @@
 
 
 import requests, os, json
-from dotenv  import load_dotenv
-from getpass import getpass
-from display import Display
+from dotenv           import load_dotenv
+from request_payloads import *
+from display          import Display
+
 
 
 class System:
@@ -32,30 +33,14 @@ class System:
 
 
     def _get_authentication_token(self) -> None:
-        data = {
-            "jsonrpc": "2.0",
-            "method": "user.login",
-            "params": {
-                "user": self._USER,
-                "password": self._PASSWORD,
-            },
-            "id": 1,
-        }
-        response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(data))
+        payload  = token_request_payload(self._USER, self._PASSWORD)
+        response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
         self._token = response.json()["result"]
 
 
     def _get_all_hosts(self) -> None:
-        data = {
-            "jsonrpc": "2.0",
-            "method": "host.get",
-            "params": {
-                "output": ["hostid", "name"],
-            },
-            "auth": self._token,
-            "id": 2,
-        }
-        response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(data))
+        payload  = all_hosts_request_payload(self._token)
+        response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
         self._all_hosts = response.json()["result"]
 
     
@@ -71,21 +56,9 @@ class System:
 
 
     def _get_item_information_of_a_host(self, hostid:str):
-        data = {
-            "jsonrpc": "2.0",
-            "method": "item.get",
-            "params": {
-                "output": ["itemid", "name", "lastvalue"],
-                "hostids": hostid,
-                "search": {
-                    "name": "Software",
-                },
-            },
-            "auth": self._token,
-            "id": 3,
-        }
+        payload = information_request_payload(hostid, self._token)
         try:
-            response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(data))
+            response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
             response.raise_for_status()
             result = response.json()
             if "result" in result:
