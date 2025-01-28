@@ -48,11 +48,12 @@ class System:
         for host in self._all_hosts:
             print(f"\nHost: {host['name']} (ID: {host['hostid']})")
             items = self._get_item_information_of_a_host(host["hostid"])
-            if not items:
+
+            if not items or len(items['result']) < 1:
                 print("  No items found.")
                 continue
-            for item in items:
-                print(f"  - {item['name']}: {item}")
+
+            print(items['result'][0]['lastvalue'])
 
 
     def _get_item_information_of_a_host(self, hostid:str) -> list:
@@ -69,10 +70,11 @@ class System:
     @staticmethod
     def _verify_if_there_is_data(result:list) -> list|None:
         if "result" in result:
-            return result["result"]
+            return result
         else:
             print("Unexpected response from API:", result)
             return []
+
 
 
 

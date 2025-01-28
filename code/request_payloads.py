@@ -36,9 +36,10 @@ def information_request_payload(hostid:str, token:str) -> dict:
                 "output": ["itemid", "name", "lastvalue"],
                 "hostids": hostid,
                 "search": {
-                    "name": "Software",
+                    "name": "Device description"
                 },
+                "sortfield": "name"
             },
             "auth": token,
-            "id": 3,
+            "id": 1
         }
