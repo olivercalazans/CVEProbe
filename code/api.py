@@ -22,7 +22,7 @@ class System:
         self._token      = None
         self._all_hosts  = None
 
-    
+
     def _execute(self) -> None:
         try:
             self._get_authentication_token()
@@ -33,43 +33,46 @@ class System:
 
 
     def _get_authentication_token(self) -> None:
-        payload  = token_request_payload(self._USER, self._PASSWORD)
-        response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
+        payload     = token_request_payload(self._USER, self._PASSWORD)
+        response    = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
         self._token = response.json()["result"]
 
 
     def _get_all_hosts(self) -> None:
-        payload  = all_hosts_request_payload(self._token)
-        response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
+        payload         = all_hosts_request_payload(self._token)
+        response        = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
         self._all_hosts = response.json()["result"]
 
-    
+
     def _display_results(self) -> None:
         for host in self._all_hosts:
             print(f"\nHost: {host['name']} (ID: {host['hostid']})")
             items = self._get_item_information_of_a_host(host["hostid"])
             if not items:
-                print("  Nenhum item encontrado.")
-            else:
-                for item in items:
-                    print(f"  - {item['name']}: {item.get('lastvalue', 'Sem valor registrado')}")
+                print("  No items found.")
+                continue
+            for item in items:
+                print(f"  - {item['name']}: {item}")
 
 
-    def _get_item_information_of_a_host(self, hostid:str):
+    def _get_item_information_of_a_host(self, hostid:str) -> list:
         payload = information_request_payload(hostid, self._token)
         try:
             response = requests.post(self._ZABBIX_URL, headers=self._HEADERS, data=json.dumps(payload))
             response.raise_for_status()
-            result = response.json()
-            if "result" in result:
-                return result["result"]
-            else:
-                print("Erro: Resposta inesperada da API:", result)
-                return []
-        except requests.exceptions.RequestException as e:
-            print(f"Erro ao se comunicar com o Zabbix: {e}")
-            return []
+            result   = response.json()
+            return self._verify_if_there_is_data(result)
+        except requests.exceptions.RequestException as error:
+            raise Exception(f"Error communicating with Zabbix: {error}")
 
+
+    @staticmethod
+    def _verify_if_there_is_data(result:list) -> list|None:
+        if "result" in result:
+            return result["result"]
+        else:
+            print("Unexpected response from API:", result)
+            return []
 
 
 
