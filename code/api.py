@@ -46,13 +46,9 @@ class System:
 
     def _display_results(self) -> None:
         for host in self._all_hosts:
-            print(f"\nHost: {host['name']} (ID: {host['hostid']})")
             items = self._get_item_information_of_a_host(host["hostid"])
-
-            if not items or len(items['result']) < 1:
-                print("  No items found.")
-                continue
-
+            if not items or len(items['result']) < 1: continue
+            print(f"\nHost: {host['name']} (ID: {host['hostid']})")
             print(items['result'][0]['lastvalue'])
 
 
