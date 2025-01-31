@@ -1,14 +1,14 @@
 # MIT License
 # Copyright (c) 2024 Oliver Ribeiro Calazans Jeronimo
-# Repository: https://github.com/olivercalazans/CVE_Mapper
+# Repository: https://github.com/olivercalazans/CVE_Walker
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
 
 import requests, os, json
-from dotenv            import load_dotenv
-from request_payloads  import *
-from string_extractors import *
-from display           import Display
+from dotenv           import load_dotenv
+from request_payloads import *
+from data_extractors  import *
+from display          import Display
 
 
 

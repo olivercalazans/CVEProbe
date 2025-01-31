@@ -1,5 +1,6 @@
-https://www.zabbix.com/documentation/6.0/en/manual/api#retrieving-hosts
-https://www.zabbix.com/documentation/6.0/en/manual/api/reference/host/get
+- MIBs >> HP (Aruba, 3com, ...) e impressoras
+- verificar Rukus
+
 
 # MITRE CVE Database
 https://www.cve.org/Media/News/item/blog/2022/10/06/CVE-Records-Are-Now-Displayed
