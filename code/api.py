@@ -1,11 +1,12 @@
 # MIT License
 # Copyright (c) 2024 Oliver Ribeiro Calazans Jeronimo
-# Repository: https://github.com/olivercalazans/CVE_Walker
+# Repository: https://github.com/olivercalazans/CVEProbe
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
 
 import requests, os, json
 from dotenv           import load_dotenv
+from getpass          import getpass
 from request_payloads import *
 from data_extractors  import *
 from display          import Display
@@ -18,7 +19,7 @@ class System:
         load_dotenv()
         self._ZABBIX_URL = os.getenv("ZABBIX_URL")
         self._USER       = os.getenv("USER")
-        self._PASSWORD   = os.getenv("PASSWORD")
+        self._PASSWORD   = getpass('Password: ')
         self._HEADERS    = {"Content-Type": "application/json"}
         self._token      = None
         self._all_hosts  = None
