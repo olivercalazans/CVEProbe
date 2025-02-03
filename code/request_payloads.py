@@ -16,30 +16,14 @@ def token_request_payload(user:str, password:str) -> dict:
     }
     
 
-def all_hosts_request_payload(token:str) -> dict:
+def device_names_and_ip_payload(token:str) -> dict:
     return {
-            "jsonrpc": "2.0",
-            "method": "host.get",
-            "params": {
-                "output": ["hostid", "name"],
-            },
-            "auth": token,
-            "id": 2,
-        }
-
-
-def information_request_payload(hostid:str, token:str) -> dict:
-    return {
-            "jsonrpc": "2.0",
-            "method": "item.get",
-            "params": {
-                "output": ["itemid", "name", "lastvalue"],
-                "hostids": hostid,
-                "search": {
-                    "name": "Device description"
-                },
-                "sortfield": "name"
-            },
-            "auth": token,
-            "id": 1
-        }
+    "jsonrpc": "2.0",
+    "method": "host.get",
+    "params": {
+        "output": ["host", "interfaces"],
+        "selectInterfaces": ["ip"]
+    },
+    "auth": token,
+    "id": 1
+}
