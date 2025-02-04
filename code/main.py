@@ -5,10 +5,11 @@
 
 
 import requests, os, json
-from dotenv           import load_dotenv
-from request_payloads import *
-from oid              import *
-from display          import *
+from dotenv              import load_dotenv
+from pysnmp.hlapi.v3arch import *
+from request_payloads    import *
+from oid                 import *
+from display             import *
 
 
 class System:
@@ -40,7 +41,23 @@ class System:
 
 
     def _prepare_data_obtained_from_zabbix(self) -> None:
-        self._hosts = [{'name': dev['host'],'ip': dev['interfaces'][0]['ip']} for dev in self._hosts]
+        self._hosts = [{'name': dev['host'], 'ip': dev['interfaces'][0]['ip']} for dev in self._hosts]
+
+
+    def _get_aditional_information_with_snmp(self) -> None:
+        for dev in self._hosts:
+            ...
+
+
+    @staticmethod
+    async def _snmp_get(ip, community, oid):
+        errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
+            SnmpEngine(),
+            CommunityData(community, mpModel=1),
+            await UdpTransportTarget.create((ip, 161), timeout=1, retries=2),
+            ContextData(),
+            ObjectType(ObjectIdentity(oid))
+        )
 
 
 
