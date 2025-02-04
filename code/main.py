@@ -8,7 +8,7 @@ import requests, os, json
 from dotenv           import load_dotenv
 from request_payloads import *
 from oid              import *
-from display          import Display
+from display          import *
 
 
 class System:
@@ -23,8 +23,8 @@ class System:
             self._get_all_hosts_from_zabbix()
             self._prepare_data_obtained_from_zabbix()
             print(self._all_hosts)
-        except KeyboardInterrupt:  print(f'{Display.red("Process stopped")}')
-        except Exception as error: print(f'{Display.red("Unknown error:")}\n{error}')
+        except KeyboardInterrupt:  print(f'{red("Process stopped")}')
+        except Exception as error: print(f'{red("Unknown error:")}\n{error}')
 
 
     def _get_all_hosts_from_zabbix(self) -> None:

@@ -3,16 +3,12 @@
 # Repository: https://github.com/olivercalazans/CVEProbe
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
-class Display:
 
-    @staticmethod
-    def green(message:str) -> str:
-        return '\033[32m' + message + '\033[0m'
+def green(message:str) -> str:
+    return '\033[32m' + message + '\033[0m'
 
-    @staticmethod
-    def red(message:str) -> str:
-        return '\033[31m' + message + '\033[0m'
+def red(message:str) -> str:
+    return '\033[31m' + message + '\033[0m'
 
-    @staticmethod
-    def yellow(message:str) -> str:
-        return '\033[33m' + message + '\033[0m'
+def yellow(message:str) -> str:
+    return '\033[33m' + message + '\033[0m'
