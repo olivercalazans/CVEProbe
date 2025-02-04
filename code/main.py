@@ -15,23 +15,22 @@ class System:
 
     def __init__(self):
         load_dotenv()
-        self._all_hosts = None
+        self._hosts = None
 
 
     def _execute(self) -> None:
         try:
             self._get_all_hosts_from_zabbix()
             self._prepare_data_obtained_from_zabbix()
-            print(self._all_hosts)
         except KeyboardInterrupt:  print(f'{red("Process stopped")}')
         except Exception as error: print(f'{red("Unknown error:")}\n{error}')
 
 
     def _get_all_hosts_from_zabbix(self) -> None:
-        payload         = token_request_payload(os.getenv("USER"), os.getenv("PASSWORD"))
-        token           = self._get_data_from_zabbix(payload)
-        payload         = device_names_and_ip_payload(token)
-        self._all_hosts = self._get_data_from_zabbix(payload)
+        payload     = token_request_payload(os.getenv("USER"), os.getenv("PASSWORD"))
+        token       = self._get_data_from_zabbix(payload)
+        payload     = device_names_and_ip_payload(token)
+        self._hosts = self._get_data_from_zabbix(payload)
 
 
     @staticmethod
@@ -41,7 +40,7 @@ class System:
 
 
     def _prepare_data_obtained_from_zabbix(self) -> None:
-        self._all_hosts = [{'name': dev['host'],'ip': dev['interfaces'][0]['ip']} for dev in self._all_hosts]
+        self._hosts = [{'name': dev['host'],'ip': dev['interfaces'][0]['ip']} for dev in self._hosts]
 
 
 
