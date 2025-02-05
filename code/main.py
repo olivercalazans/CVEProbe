@@ -4,7 +4,7 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
 
-import os, json, sys
+import os, json, sys, asyncio
 import requests
 from pysnmp.hlapi.v3arch import *
 from dotenv              import load_dotenv
@@ -17,8 +17,8 @@ class System:
 
     def __init__(self):
         load_dotenv()
-        self._hosts    = None
-        self._oid_list = None
+        self._hosts    = dict()
+        self._oid_list = dict()
 
 
     def _read_oid_list(self) -> dict:
@@ -58,11 +58,15 @@ class System:
 
 
     def _prepare_data_obtained_from_zabbix(self) -> None:
-        self._hosts = [{'name': dev['host'], 'ip': dev['interfaces'][0]['ip']} for dev in self._hosts]
+        updated_dict = {dev['interfaces'][0]['ip']: {'name': dev['host']} for dev in self._hosts}
+        self._hosts  = updated_dict
 
 
-    def _get_manufacturer_name_and_oid(self) -> None:
-        ...
+    def _get_manufacturer_name_and_oid(self, ip:str) -> None:
+        response          = asyncio.run(self._snmpget(ip, '.1.3.6.1.2.1.1.2.0'))
+        manufacturer_oid  = response.split('.', 7)[0]
+        manufacturer_name = self._oid_list.get(manufacturer_oid, None)
+        self._hosts[ip] = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
 
 
     def _get_aditional_information_with_snmp(self) -> None:
@@ -71,10 +75,10 @@ class System:
 
 
     @staticmethod
-    async def _snmpget(ip, community, oid):
+    async def _snmpget(ip, oid:str) -> str:
         errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
             SnmpEngine(),
-            CommunityData(community, mpModel=1),
+            CommunityData(os.getenv("COMMUNITY"), mpModel=1),
             await UdpTransportTarget.create((ip, 161), timeout=1, retries=2),
             ContextData(),
             ObjectType(ObjectIdentity(oid))
