@@ -62,18 +62,6 @@ class System:
         self._hosts  = updated_dict
 
 
-    def _get_manufacturer_name_and_oid(self, ip:str) -> None:
-        response          = asyncio.run(self._snmpget(ip, '.1.3.6.1.2.1.1.2.0'))
-        manufacturer_oid  = response.split('.', 7)[0]
-        manufacturer_name = self._oid_list.get(manufacturer_oid, None)
-        self._hosts[ip] = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
-
-
-    def _get_aditional_information_with_snmp(self) -> None:
-        for dev in self._hosts:
-            ...
-
-
     @staticmethod
     async def _snmpget(ip, oid:str) -> str:
         errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
@@ -85,6 +73,18 @@ class System:
         )
 
         return varBinds
+
+
+    def _get_aditional_information_with_snmp(self) -> None:
+        for dev in self._hosts:
+            self._get_manufacturer_name_and_oid(dev)
+
+
+    def _get_manufacturer_name_and_oid(self, ip:str) -> None:
+        response          = asyncio.run(self._snmpget(ip, '.1.3.6.1.2.1.1.2.0'))
+        manufacturer_oid  = response.split('.', 7)[0]
+        manufacturer_name = self._oid_list.get(manufacturer_oid, None)
+        self._hosts[ip]   = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
 
 
     @staticmethod
