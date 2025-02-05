@@ -4,9 +4,10 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
 
-import requests, os, json
-from dotenv              import load_dotenv
+import os, json, sys
+import requests
 from pysnmp.hlapi.v3arch import *
+from dotenv              import load_dotenv
 from request_payloads    import *
 from oid                 import *
 from display             import *
@@ -16,11 +17,27 @@ class System:
 
     def __init__(self):
         load_dotenv()
-        self._hosts = None
+        self._hosts    = None
+        self._oid_list = None
+
+    
+    def _read_oid_list(self) -> dict:
+        try:
+            with open('oid_manufacturer.json', 'r', encoding='utf-8') as file:
+                self = json.load(file)
+        except FileNotFoundError:  self._sys_exit('File "oid_manufacturer.json not found"')
+        except Exception as error: self._sys_exit(f'Unknown error {error}')
+
+    
+    @staticmethod
+    def _sys_exit(message:str) -> None:
+        print(f'{red(message)}')
+        sys.exit()
 
 
     def _execute(self) -> None:
         try:
+            self._read_oid_list()
             self._get_all_hosts_from_zabbix()
             self._prepare_data_obtained_from_zabbix()
         except KeyboardInterrupt:  print(f'{red("Process stopped")}')
@@ -44,13 +61,17 @@ class System:
         self._hosts = [{'name': dev['host'], 'ip': dev['interfaces'][0]['ip']} for dev in self._hosts]
 
 
+    def _get_manufacturer_name_and_oid(self) -> None:
+        ...
+
+    
     def _get_aditional_information_with_snmp(self) -> None:
         for dev in self._hosts:
             ...
 
 
     @staticmethod
-    async def _snmp_get(ip, community, oid):
+    async def _snmpget(ip, community, oid):
         errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
             SnmpEngine(),
             CommunityData(community, mpModel=1),
@@ -58,6 +79,13 @@ class System:
             ContextData(),
             ObjectType(ObjectIdentity(oid))
         )
+
+        return varBinds
+
+    
+    @staticmethod
+    def _format_snmp_response(response:str) -> str:
+        return response.split('=')[-1].strip('"')
 
 
 
