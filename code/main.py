@@ -20,15 +20,15 @@ class System:
         self._hosts    = None
         self._oid_list = None
 
-    
+
     def _read_oid_list(self) -> dict:
         try:
             with open('oid_manufacturer.json', 'r', encoding='utf-8') as file:
-                self = json.load(file)
+                self._oid_list = json.load(file)
         except FileNotFoundError:  self._sys_exit('File "oid_manufacturer.json not found"')
         except Exception as error: self._sys_exit(f'Unknown error {error}')
 
-    
+
     @staticmethod
     def _sys_exit(message:str) -> None:
         print(f'{red(message)}')
@@ -64,7 +64,7 @@ class System:
     def _get_manufacturer_name_and_oid(self) -> None:
         ...
 
-    
+
     def _get_aditional_information_with_snmp(self) -> None:
         for dev in self._hosts:
             ...
@@ -82,7 +82,7 @@ class System:
 
         return varBinds
 
-    
+
     @staticmethod
     def _format_snmp_response(response:str) -> str:
         return response.split('=')[-1].strip('"')
