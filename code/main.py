@@ -4,16 +4,16 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
 
+from pysnmp.hlapi.v3arch import *
 import os, json, sys, asyncio
 import requests
-from pysnmp.hlapi.v3arch import *
-from dotenv              import load_dotenv
-from request_payloads    import *
-from oid                 import *
-from display             import *
+from dotenv           import load_dotenv
+from request_payloads import *
+from oid              import *
+from display          import *
 
 
-class System:
+class Main:
 
     def __init__(self):
         load_dotenv()
@@ -21,9 +21,11 @@ class System:
         self._oid_list = dict()
 
 
-    def _read_oid_list(self) -> dict:
+    def _read_oid_list(self) -> None:
+        FILE_PATH = os.path.dirname(os.path.abspath(__file__))
+        FILE_PATH = os.path.join(FILE_PATH, 'oid_manufacturer.json')
         try:
-            with open('oid_manufacturer.json', 'r', encoding='utf-8') as file:
+            with open(FILE_PATH, 'r', encoding='utf-8') as file:
                 self._oid_list = json.load(file)
         except FileNotFoundError:  self._sys_exit('File "oid_manufacturer.json not found"')
         except Exception as error: self._sys_exit(f'Unknown error {error}')
@@ -37,9 +39,15 @@ class System:
 
     def _execute(self) -> None:
         try:
+            print('Reading oid_manufacturer.json file')
             self._read_oid_list()
+            print('Getting data from zabbix')
             self._get_all_hosts_from_zabbix()
+            print('Preparing data received from zabbix')
             self._prepare_data_obtained_from_zabbix()
+            print('Getting additional data with SNMP')
+            self._get_aditional_information_with_snmp()
+            print(**self._hosts)
         except KeyboardInterrupt:  print(f'{red("Process stopped")}')
         except Exception as error: print(f'{red("Unknown error:")}\n{error}')
 
@@ -63,7 +71,12 @@ class System:
 
 
     @staticmethod
-    async def _snmpget(ip, oid:str) -> str:
+    def _execute_snmpget(ip:str, oid:str) -> str:
+        return Main._snmpget_async(ip, oid)
+
+
+    @staticmethod
+    async def _snmpget_async(ip, oid:str) -> str:
         errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
             SnmpEngine(),
             CommunityData(os.getenv("COMMUNITY"), mpModel=1),
@@ -71,8 +84,8 @@ class System:
             ContextData(),
             ObjectType(ObjectIdentity(oid))
         )
-
-        return varBinds
+        print (str(varBinds[-1]))
+        return str(varBinds[-1]) if varBinds else None
 
 
     def _get_aditional_information_with_snmp(self) -> None:
@@ -81,7 +94,7 @@ class System:
 
 
     def _get_manufacturer_name_and_oid(self, ip:str) -> None:
-        response          = asyncio.run(self._snmpget(ip, '.1.3.6.1.2.1.1.2.0'))
+        response          = asyncio.run(self._execute_snmpget(ip, '.1.3.6.1.2.1.1.2.0'))
         manufacturer_oid  = response.split('.', 7)[0]
         manufacturer_name = self._oid_list.get(manufacturer_oid, None)
         self._hosts[ip]   = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
@@ -96,5 +109,5 @@ class System:
 
 
 if __name__ == "__main__":
-    system = System()
+    system = Main()
     system._execute()
