@@ -70,7 +70,7 @@ class Main:
         for dev in self._hosts:
             ip   = dev['interfaces'][0]['ip']
             name = dev['host']
-            if '10.2.' in ip: continue
+            if os.getenv("NETS") in ip: continue
             updated_dict[ip] = {'name': name}
         self._hosts = updated_dict
 
