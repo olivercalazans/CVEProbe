@@ -20,8 +20,20 @@ class Main:
         self._hosts    = dict()
         self._oid_list = dict()
 
+    
+    def _execute(self) -> None:
+        try:
+            self._read_oid_list()
+            self._get_all_hosts_from_zabbix()
+            self._prepare_data_obtained_from_zabbix()
+            self._get_aditional_information_with_snmp()
+            print(**self._hosts)
+        except KeyboardInterrupt:  print(f'\n{red("Process stopped")}')
+        except Exception as error: print(f'{red("Unknown error:")}\n{error}')
+
 
     def _read_oid_list(self) -> None:
+        print('Reading oid_manufacturer.json file')
         FILE_PATH = os.path.dirname(os.path.abspath(__file__))
         FILE_PATH = os.path.join(FILE_PATH, 'oid_manufacturer.json')
         try:
@@ -37,22 +49,8 @@ class Main:
         sys.exit()
 
 
-    def _execute(self) -> None:
-        try:
-            print('Reading oid_manufacturer.json file')
-            self._read_oid_list()
-            print('Getting data from zabbix')
-            self._get_all_hosts_from_zabbix()
-            print('Preparing data received from zabbix')
-            self._prepare_data_obtained_from_zabbix()
-            print('Getting additional data with SNMP')
-            self._get_aditional_information_with_snmp()
-            print(**self._hosts)
-        except KeyboardInterrupt:  print(f'\n{red("Process stopped")}')
-        except Exception as error: print(f'{red("Unknown error:")}\n{error}')
-
-
     def _get_all_hosts_from_zabbix(self) -> None:
+        print('Getting data from zabbix')
         payload     = token_request_payload(os.getenv("USER"), os.getenv("PASSWORD"))
         token       = self._get_data_from_zabbix(payload)
         payload     = device_names_and_ip_payload(token)
@@ -66,18 +64,20 @@ class Main:
 
 
     def _prepare_data_obtained_from_zabbix(self) -> None:
+        print('Preparing data received from zabbix')
+        NETWORKS     = os.getenv("NETS").split('-')
         updated_dict = dict()
         for dev in self._hosts:
             ip   = dev['interfaces'][0]['ip']
             name = dev['host']
-            if os.getenv("NETS") in ip: continue
+            if not ip[:11] in NETWORKS: continue
             updated_dict[ip] = {'name': name}
         self._hosts = updated_dict
 
 
     @staticmethod
     def _execute_snmpget(ip:str, oid:str) -> str:
-        return Main._snmpget_async(ip, oid)
+        return asyncio.run(Main._snmpget_async(ip, oid))
 
 
     @staticmethod
@@ -93,6 +93,7 @@ class Main:
 
 
     def _get_aditional_information_with_snmp(self) -> None:
+        print('Getting additional data with SNMP')
         len_devices = len(self._hosts)
         for index, dev in enumerate(self._hosts):
             sys.stdout.write(f'\rDevice: {index}/{len_devices}')
@@ -102,7 +103,7 @@ class Main:
 
 
     def _get_manufacturer_name_and_oid(self, ip:str) -> None:
-        response          = asyncio.run(self._execute_snmpget(ip, '.1.3.6.1.2.1.1.2.0'))
+        response          = self._execute_snmpget(ip, '.1.3.6.1.2.1.1.2.0')
         manufacturer_oid  = self._format_manufacturer_oid(response) if response else None
         manufacturer_name = self._oid_list.get(manufacturer_oid, None)
         self._hosts[ip]   = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
@@ -115,6 +116,7 @@ class Main:
         oid = oid.split('.')[:7]
         oid = '.'.join(oid)
         return oid
+
 
 
 
