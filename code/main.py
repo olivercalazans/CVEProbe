@@ -107,15 +107,14 @@ class Main:
         manufacturer_oid  = self._format_manufacturer_oid(response) if response else None
         manufacturer_name = self._oid_list.get(manufacturer_oid, None)
         self._hosts[ip]   = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
-        print(ip, self._hosts[ip])
 
-    
+
     @staticmethod
     def _format_manufacturer_oid(oid:str) -> str:
         oid = oid.split('=')[-1]
         oid = oid.split('.')[:7]
         oid = '.'.join(oid)
-        return oid
+        return oid.strip()
 
 
 
