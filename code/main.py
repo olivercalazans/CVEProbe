@@ -17,17 +17,18 @@ class Main:
 
     def __init__(self):
         load_dotenv()
-        self._hosts    = dict()
-        self._oid_list = dict()
+        self._oid_list           = dict()
+        self._hosts              = dict()
+        self._unreacheable_hosts = list()
 
-    
+
     def _execute(self) -> None:
         try:
             self._read_oid_list()
             self._get_all_hosts_from_zabbix()
             self._prepare_data_obtained_from_zabbix()
-            self._get_aditional_information_with_snmp()
-            print(**self._hosts)
+            self._get_manufacturer_oid_and_name()
+            self._remove_hosts_without_response()
         except KeyboardInterrupt:  print(f'\n{red("Process stopped")}')
         except Exception as error: print(f'{red("Unknown error:")}\n{error}')
 
@@ -68,10 +69,9 @@ class Main:
         NETWORKS     = os.getenv("NETS").split('-')
         updated_dict = dict()
         for dev in self._hosts:
-            ip   = dev['interfaces'][0]['ip']
-            name = dev['host']
+            ip = dev['interfaces'][0]['ip']
             if not ip[:11] in NETWORKS: continue
-            updated_dict[ip] = {'name': name}
+            updated_dict[ip] = {'name': dev['host']}
         self._hosts = updated_dict
 
 
@@ -81,7 +81,7 @@ class Main:
 
 
     @staticmethod
-    async def _snmpget_async(ip, oid:str) -> str:
+    async def _snmpget_async(ip:str, oid:str) -> str:
         errorIndication, errorStatus, errorIndex, varBinds = await get_cmd(
             SnmpEngine(),
             CommunityData(os.getenv("COMMUNITY"), mpModel=1),
@@ -92,19 +92,18 @@ class Main:
         return str(varBinds[-1]) if varBinds else None
 
 
-    def _get_aditional_information_with_snmp(self) -> None:
-        print('Getting additional data with SNMP')
-        len_devices = len(self._hosts)
-        for index, dev in enumerate(self._hosts):
-            sys.stdout.write(f'\rDevice: {index}/{len_devices}')
-            sys.stdout.flush()
-            self._get_manufacturer_name_and_oid(dev)
-        print('\n')
+    def _get_manufacturer_oid_and_name(self) -> None:
+        print('Getting manufacturer OID and name')
+        for dev in self._hosts:
+            response = self._execute_snmpget(dev, '.1.3.6.1.2.1.1.2.0')
+            if not response:
+                self._unreacheable_hosts.append(dev)
+                continue
+            self._get_manufacturer_name(dev, response)
 
 
-    def _get_manufacturer_name_and_oid(self, ip:str) -> None:
-        response          = self._execute_snmpget(ip, '.1.3.6.1.2.1.1.2.0')
-        manufacturer_oid  = self._format_manufacturer_oid(response) if response else None
+    def _get_manufacturer_name(self, ip:str, response:str) -> None:
+        manufacturer_oid  = self._format_manufacturer_oid(response)
         manufacturer_name = self._oid_list.get(manufacturer_oid, None)
         self._hosts[ip]   = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
 
@@ -115,6 +114,11 @@ class Main:
         oid = oid.split('.')[:7]
         oid = '.'.join(oid)
         return oid.strip()
+
+
+    def _remove_hosts_without_response(self) -> None:
+        print('Removing hosts without response')
+        self._hosts = {dev: self._hosts[dev] for dev in self._hosts if not dev in self._unreacheable_hosts}
 
 
 
