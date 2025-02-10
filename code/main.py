@@ -5,7 +5,7 @@
 
 
 from pysnmp.hlapi.v3arch import *
-import os, json, sys, asyncio
+import os, json, sys, asyncio, threading
 import requests
 from dotenv           import load_dotenv
 from request_payloads import *
@@ -18,6 +18,7 @@ class Main:
     def __init__(self):
         load_dotenv()
         self._oid_list           = dict()
+        self._LOCK               = threading.Lock()
         self._hosts              = dict()
         self._unreacheable_hosts = list()
 
@@ -29,6 +30,7 @@ class Main:
             self._prepare_data_obtained_from_zabbix()
             self._get_manufacturer_oid_and_name()
             self._remove_hosts_without_response()
+            print(self._hosts)
         except KeyboardInterrupt:  print(f'\n{red("Process stopped")}')
         except Exception as error: print(f'{red("Unknown error:")}\n{error}')
 
@@ -93,19 +95,30 @@ class Main:
 
 
     def _get_manufacturer_oid_and_name(self) -> None:
-        print('Getting manufacturer OID and name')
-        for dev in self._hosts:
-            response = self._execute_snmpget(dev, '.1.3.6.1.2.1.1.2.0')
-            if not response:
-                self._unreacheable_hosts.append(dev)
-                continue
-            self._get_manufacturer_name(dev, response)
+        print('Getting manufacturer OID')
+        thread_list = list()
+        for ip in self._hosts:
+            thread = threading.Thread(target=self._get_oid_and_name, args=(ip,))
+            thread_list.append(thread)
+            thread.start()
+        for thread in thread_list:
+            thread.join()
+
+
+    def _get_oid_and_name(self, ip:str) -> str:
+        response = self._execute_snmpget(ip, '.1.3.6.1.2.1.1.2.0')
+        if response:
+            self._get_manufacturer_name(ip, response)
+        else:
+            with self._LOCK:
+                self._unreacheable_hosts.append(ip)
 
 
     def _get_manufacturer_name(self, ip:str, response:str) -> None:
         manufacturer_oid  = self._format_manufacturer_oid(response)
         manufacturer_name = self._oid_list.get(manufacturer_oid, None)
-        self._hosts[ip]   = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
+        with self._LOCK:
+            self._hosts[ip] = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
 
 
     @staticmethod
@@ -118,7 +131,7 @@ class Main:
 
     def _remove_hosts_without_response(self) -> None:
         print('Removing hosts without response')
-        self._hosts = {dev: self._hosts[dev] for dev in self._hosts if not dev in self._unreacheable_hosts}
+        self._hosts = {ip: self._hosts[ip] for ip in self._hosts if not ip in self._unreacheable_hosts}
 
 
 
