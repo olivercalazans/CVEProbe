@@ -9,3 +9,11 @@ def rukus_oid() -> list:
         '.1.1.2.1.1.1.1.0',        # Device 
         '.1.1.3.1.1.1.1.1.3.1'     # Firmware version
         ]
+
+
+def hpe_5130() -> list:
+    return [
+        '.1.3.6.1.2.1.47.1.1.1.1.7.2',    # Device serie
+        '.1.3.6.1.2.1.47.1.1.1.1.13.2',   # Device model
+        '.1.3.6.1.2.1.47.1.1.1.1.10.2'    # Software version
+        ]
