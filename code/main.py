@@ -5,7 +5,7 @@
 
 
 from pysnmp.hlapi.v3arch import *
-import os, json, sys, asyncio, threading
+import os, json, sys, asyncio, threading, ipaddress
 import requests
 from dotenv           import load_dotenv
 from request_payloads import *
@@ -30,6 +30,7 @@ class Main:
             self._prepare_data_obtained_from_zabbix()
             self._get_manufacturer_oid_and_name()
             self._remove_hosts_without_response()
+            self._sort_ip_addresses()
             self._display_result(self._hosts)
         except KeyboardInterrupt:  print(f'\n{red("Process stopped")}')
         except Exception as error: print(f'{red("Unknown error:")}\n{error}')
@@ -132,6 +133,10 @@ class Main:
     def _remove_hosts_without_response(self) -> None:
         print('Removing hosts without response')
         self._hosts = {ip: self._hosts[ip] for ip in self._hosts if not ip in self._unreacheable_hosts}
+
+
+    def _sort_ip_addresses(self) -> None:
+        self._hosts = dict(sorted(self._hosts.items(), key=lambda item: ipaddress.ip_address(item[0])))
 
 
     @staticmethod
