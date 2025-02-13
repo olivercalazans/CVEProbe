@@ -140,6 +140,18 @@ class Main:
 
 
     @staticmethod
+    def _identify_switch_model_to_get_oid(description:str) -> None:
+        if description == 'HPE' or description == 'HP':
+            return hpe
+        if description == 'Ruckus':
+            return ruckus_oid
+        if description == '1920':
+            return hp_1920
+        if description == 'Aruba':
+            return aruba_jl357a
+
+
+    @staticmethod
     def _display_result(hosts) -> None:
         for ip in hosts:
             print(ip)
