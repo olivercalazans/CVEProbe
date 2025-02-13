@@ -4,7 +4,7 @@
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
 
 
-def rukus_oid() -> list:
+def ruckus_oid() -> list:
     return [
         '.1.3.6.1.4.1.25053.1.1.2.1.1.1.1.0',        # Device 
         '.1.3.6.1.4.1.25053.1.1.3.1.1.1.1.1.3.1'     # Firmware version
