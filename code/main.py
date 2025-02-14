@@ -7,6 +7,7 @@
 from pysnmp.hlapi.v3arch import *
 import os, json, sys, asyncio, threading, ipaddress
 import requests
+from functools        import lru_cache
 from dotenv           import load_dotenv
 from request_payloads import *
 from oid              import *
@@ -14,6 +15,14 @@ from display          import *
 
 
 class Main:
+
+    MAPPING = {
+        'HPE':    hpe,
+        'HP':     hpe,
+        '1920':   hp_1920,
+        'Ruckus': ruckus_oid,
+        'Aruba':  aruba_jl357a
+    }
 
     def __init__(self):
         load_dotenv()
@@ -140,15 +149,9 @@ class Main:
 
 
     @staticmethod
+    @lru_cache(maxsize=5)
     def _identify_switch_model_to_get_oid(description:str) -> None:
-        if description == 'HPE' or description == 'HP':
-            return hpe
-        if description == 'Ruckus':
-            return ruckus_oid
-        if description == '1920':
-            return hp_1920
-        if description == 'Aruba':
-            return aruba_jl357a
+        return Main.MAPPING.get(description, None)
 
 
     @staticmethod
