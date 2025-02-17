@@ -16,7 +16,8 @@ from display          import *
 
 class Main:
 
-    MAPPING = {
+    OID_LIST = dict()
+    MAPPING  = {
         'HPE':    hpe,
         'HP':     hpe,
         '1920':   hp_1920,
@@ -26,7 +27,6 @@ class Main:
 
     def __init__(self):
         load_dotenv()
-        self._oid_list           = dict()
         self._LOCK               = threading.Lock()
         self._hosts              = dict()
         self._unreacheable_hosts = list()
@@ -37,7 +37,7 @@ class Main:
             self._read_oid_list()
             self._get_all_hosts_from_zabbix()
             self._prepare_data_obtained_from_zabbix()
-            self._get_manufacturer_oid_and_name()
+            self._get_additional_information_if_possible()
             self._remove_hosts_without_response()
             self._sort_ip_addresses()
             self._display_result(self._hosts)
@@ -45,15 +45,16 @@ class Main:
         except Exception as error: print(f'{red("Unknown error:")}\n{error}')
 
 
-    def _read_oid_list(self) -> None:
+    @classmethod
+    def _read_oid_list(cls) -> None:
         print('Reading oid_manufacturer.json file')
         FILE_PATH = os.path.dirname(os.path.abspath(__file__))
         FILE_PATH = os.path.join(FILE_PATH, 'oid_manufacturer.json')
         try:
             with open(FILE_PATH, 'r', encoding='utf-8') as file:
-                self._oid_list = json.load(file)
-        except FileNotFoundError:  self._sys_exit('File "oid_manufacturer.json not found"')
-        except Exception as error: self._sys_exit(f'Unknown error {error}')
+                cls.OID_LIST = json.load(file)
+        except FileNotFoundError:  cls._sys_exit('File "oid_manufacturer.json not found"')
+        except Exception as error: cls._sys_exit(f'Unknown error {error}')
 
 
     @staticmethod
@@ -104,29 +105,34 @@ class Main:
         return str(varBinds[-1]) if varBinds else None
 
 
-    def _get_manufacturer_oid_and_name(self) -> None:
+    def _get_additional_information_if_possible(self) -> None:
         print('Getting manufacturer OID')
         thread_list = list()
         for ip in self._hosts:
-            thread = threading.Thread(target=self._get_oid_and_name, args=(ip,))
+            thread = threading.Thread(target=self._get_info_to_verify_connection, args=(ip,))
             thread_list.append(thread)
             thread.start()
         for thread in thread_list:
             thread.join()
 
 
-    def _get_oid_and_name(self, ip:str) -> str:
+    def _get_info_to_verify_connection(self, ip:str) -> str:
         response = self._execute_snmpget(ip, '.1.3.6.1.2.1.1.2.0')
         if response:
-            self._get_manufacturer_name(ip, response)
+            self._get_info_using_snmp(ip, response)
         else:
             with self._LOCK:
                 self._unreacheable_hosts.append(ip)
 
 
-    def _get_manufacturer_name(self, ip:str, response:str) -> None:
+    def _get_info_using_snmp(self, ip:str, response:str) -> None:
+        self._get_manufacturer_oid_and_name(ip, response)
+        #self._get_additional_information(ip)
+
+
+    def _get_manufacturer_oid_and_name(self, ip:str, response:str) -> None:
         manufacturer_oid  = self._format_manufacturer_oid(response)
-        manufacturer_name = self._oid_list.get(manufacturer_oid, None)
+        manufacturer_name = self._get_manufacturer_name_by_its_oid(manufacturer_oid)
         with self._LOCK:
             self._hosts[ip] = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
 
@@ -139,6 +145,16 @@ class Main:
         return oid.strip()
 
 
+    @classmethod
+    @lru_cache(maxsize=10)
+    def _get_manufacturer_name_by_its_oid(cls, oid:str) -> str:
+        return cls.OID_LIST.get(oid, None)
+
+
+    def _get_additional_information(self) -> None:
+        ...
+
+
     def _remove_hosts_without_response(self) -> None:
         print('Removing hosts without response')
         self._hosts = {ip: self._hosts[ip] for ip in self._hosts if not ip in self._unreacheable_hosts}
@@ -148,10 +164,10 @@ class Main:
         self._hosts = dict(sorted(self._hosts.items(), key=lambda item: ipaddress.ip_address(item[0])))
 
 
-    @staticmethod
+    @classmethod
     @lru_cache(maxsize=5)
-    def _identify_switch_model_to_get_oid(description:str) -> None:
-        return Main.MAPPING.get(description, None)
+    def _identify_switch_model_to_get_oid(cls, description:str) -> None:
+        return cls.MAPPING.get(description, None)
 
 
     @staticmethod
