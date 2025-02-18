@@ -103,7 +103,17 @@ class Main:
             ContextData(),
             ObjectType(ObjectIdentity(oid))
         )
-        return str(varBinds[-1]) if varBinds else None
+        if varBinds:
+            return Main._format_snmp_response(varBinds)
+        return None
+
+
+    @staticmethod
+    def _format_snmp_response(varBinds:tuple) -> str:
+        _, value = varBinds[-1]
+        if isinstance(value, OctetString):
+            return value.asOctets().decode("utf-8", errors="ignore")
+        return value.prettyPrint()
 
 
     def _get_additional_information_if_possible(self) -> None:
