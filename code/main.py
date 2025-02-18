@@ -18,11 +18,11 @@ class Main:
 
     OID_LIST = dict()
     MAPPING  = {
-        'HPE':    hpe,
-        'HP':     hpe,
-        '1920':   hp_1920,
-        'Ruckus': ruckus_oid,
-        'Aruba':  aruba_jl357a
+        'HPE':          hpe,
+        'HP':           hpe,
+        '1920-8G-PoE+': hp_1920,
+        'Aruba':        aruba_jl357a,
+        'Ruckus':       ruckus_oid
     }
 
     def __init__(self):
@@ -144,7 +144,7 @@ class Main:
 
     def _get_info_using_snmp(self) -> None:
         self._get_manufacturer_oid_and_name()
-        #self._get_additional_information(ip)
+        self._get_additional_information()
 
 
     def _get_manufacturer_oid_and_name(self) -> None:
@@ -168,14 +168,17 @@ class Main:
         return cls.OID_LIST.get(oid, None)
 
 
-    def _get_additional_information(self, ip:str) -> None:
-        description = self._execute_snmpget(ip, '.1.3.6.1.2.1.1.1.0')
+    def _get_additional_information(self) -> None:
+        description = self._execute_snmpget(self._thread_local_var.ip, '.1.3.6.1.2.1.1.1.0')
+        oid_list    = self._get_oid_list(description.split()[0])
+        self._hosts[self._thread_local_var.ip].update({'oids': oid_list})
 
 
     @classmethod
     @lru_cache(maxsize=10)
-    def _identify_switch_model_to_get_oid(cls, description:str) -> None:
-        return cls.MAPPING.get(description, None)
+    def _get_oid_list(cls, description:str) -> list:
+        oid_funtion = cls.MAPPING.get(description, None)
+        if oid_funtion: return oid_funtion()
 
 
     def _remove_hosts_without_response(self) -> None:
