@@ -28,6 +28,7 @@ class Main:
     def __init__(self):
         load_dotenv()
         self._LOCK               = threading.Lock()
+        self._thread_local_var   = threading.local()
         self._hosts              = dict()
         self._unreacheable_hosts = list()
 
@@ -119,22 +120,28 @@ class Main:
     def _get_info_to_verify_connection(self, ip:str) -> str:
         response = self._execute_snmpget(ip, '.1.3.6.1.2.1.1.2.0')
         if response:
-            self._get_info_using_snmp(ip, response)
+            self._set_data_for_thread(ip, response)
+            self._get_info_using_snmp()
         else:
             with self._LOCK:
                 self._unreacheable_hosts.append(ip)
 
 
-    def _get_info_using_snmp(self, ip:str, response:str) -> None:
-        self._get_manufacturer_oid_and_name(ip, response)
+    def _set_data_for_thread(self, ip:str, description:str) -> None:
+        self._thread_local_var.ip          = ip
+        self._thread_local_var.description = description
+
+
+    def _get_info_using_snmp(self) -> None:
+        self._get_manufacturer_oid_and_name()
         #self._get_additional_information(ip)
 
 
-    def _get_manufacturer_oid_and_name(self, ip:str, response:str) -> None:
-        manufacturer_oid  = self._format_manufacturer_oid(response)
+    def _get_manufacturer_oid_and_name(self) -> None:
+        manufacturer_oid  = self._format_manufacturer_oid(self._thread_local_var.description)
         manufacturer_name = self._get_manufacturer_name_by_its_oid(manufacturer_oid)
         with self._LOCK:
-            self._hosts[ip] = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
+            self._hosts[self._thread_local_var.ip] = {'manufacturer': manufacturer_name, 'oid': manufacturer_oid}
 
 
     @staticmethod
@@ -151,8 +158,14 @@ class Main:
         return cls.OID_LIST.get(oid, None)
 
 
-    def _get_additional_information(self) -> None:
-        ...
+    def _get_additional_information(self, ip:str) -> None:
+        description = self._execute_snmpget(ip, '.1.3.6.1.2.1.1.1.0')
+
+
+    @classmethod
+    @lru_cache(maxsize=10)
+    def _identify_switch_model_to_get_oid(cls, description:str) -> None:
+        return cls.MAPPING.get(description, None)
 
 
     def _remove_hosts_without_response(self) -> None:
@@ -162,12 +175,6 @@ class Main:
 
     def _sort_ip_addresses(self) -> None:
         self._hosts = dict(sorted(self._hosts.items(), key=lambda item: ipaddress.ip_address(item[0])))
-
-
-    @classmethod
-    @lru_cache(maxsize=5)
-    def _identify_switch_model_to_get_oid(cls, description:str) -> None:
-        return cls.MAPPING.get(description, None)
 
 
     @staticmethod
